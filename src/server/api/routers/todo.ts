@@ -1,5 +1,5 @@
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { z } from "zod";
+import { createTodoSchema } from "~/app/create-todo-schema";
 
 export const todoRouter = createTRPCRouter({
   getMyTodos: protectedProcedure.query(({ ctx }) =>
@@ -10,8 +10,9 @@ export const todoRouter = createTRPCRouter({
       orderBy: { createdAt: "desc" },
     }),
   ),
+  //https://github.com/colinhacks/zod/issues/63#issuecomment-1429974422
   create: protectedProcedure
-    .input(z.object({ text: z.string().min(1) }))
+    .input(createTodoSchema)
     .mutation(({ ctx, input }) =>
       ctx.db.todo.create({
         data: {
