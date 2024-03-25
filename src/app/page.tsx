@@ -1,6 +1,26 @@
 import { unstable_noStore as noStore } from "next/cache";
 
 import { getServerAuthSession } from "~/server/auth";
+import { api } from "~/trpc/server";
+import { TodoListItem } from "~/app/_components/todo-list-item";
+import { Suspense } from "react";
+
+async function ToDoList() {
+  //wait for 1 second to simulate loading
+  await (() => new Promise((resolve) => setTimeout(resolve, 1000)))();
+
+  const todos = await api.todo.getMyTodos();
+
+  if (!todos.length) return <div>No todos, all done 🤩🥳</div>;
+
+  return (
+    <div>
+      {todos.map((todo) => (
+        <TodoListItem key={todo.id} {...todo} />
+      ))}
+    </div>
+  );
+}
 
 export default async function Home() {
   noStore();
@@ -11,6 +31,9 @@ export default async function Home() {
       <div className="text-xl">
         {session?.user === undefined ? "Login required" : "AuthorizedContent"}
       </div>
+      {session?.user !== undefined && (
+        <Suspense fallback={<div>Loading...</div>}>{<ToDoList />}</Suspense>
+      )}
     </main>
   );
 }
