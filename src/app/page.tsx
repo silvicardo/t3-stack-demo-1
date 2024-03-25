@@ -2,7 +2,7 @@ import { getServerAuthSession } from "~/server/auth";
 import { api } from "~/trpc/server";
 import { TodoListItem } from "~/app/_components/todo-list-item";
 import { Suspense } from "react";
-import { CreateTodoClient } from "~/app/_components/create-todo-client";
+import { CreateTodoActions } from "~/app/_components/create-todo-actions";
 
 async function ToDoList() {
   //wait for 1 second to simulate loading
@@ -22,7 +22,6 @@ async function ToDoList() {
 }
 
 export default async function Home() {
-  //noStore();
   const session = await getServerAuthSession();
 
   return (
@@ -35,7 +34,7 @@ export default async function Home() {
           <Suspense fallback={<div>Loading...</div>}>
             <ToDoList />
           </Suspense>
-          <CreateTodoClient />
+          <CreateTodoActions />
         </>
       )}
     </main>
