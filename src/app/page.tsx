@@ -1,9 +1,8 @@
-import { unstable_noStore as noStore } from "next/cache";
-
 import { getServerAuthSession } from "~/server/auth";
 import { api } from "~/trpc/server";
 import { TodoListItem } from "~/app/_components/todo-list-item";
 import { Suspense } from "react";
+import { CreateTodoClient } from "~/app/_components/create-todo-client";
 
 async function ToDoList() {
   //wait for 1 second to simulate loading
@@ -23,7 +22,7 @@ async function ToDoList() {
 }
 
 export default async function Home() {
-  noStore();
+  //noStore();
   const session = await getServerAuthSession();
 
   return (
@@ -32,7 +31,12 @@ export default async function Home() {
         {session?.user === undefined ? "Login required" : "AuthorizedContent"}
       </div>
       {session?.user !== undefined && (
-        <Suspense fallback={<div>Loading...</div>}>{<ToDoList />}</Suspense>
+        <>
+          <Suspense fallback={<div>Loading...</div>}>
+            <ToDoList />
+          </Suspense>
+          <CreateTodoClient />
+        </>
       )}
     </main>
   );
