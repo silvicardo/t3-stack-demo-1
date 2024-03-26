@@ -2,67 +2,52 @@
 
 import { api } from "~/trpc/server";
 import { revalidatePath } from "next/cache";
-import { createTodoSchema } from "~/app/create-todo-schema";
+import { ZodError } from "zod";
+import { TRPCError } from "@trpc/server";
+
+type Errors = { text?: string[] | undefined };
+type Fields = { text: string };
 
 export type CreateTodoFormState = {
   message: string;
-  fields: {
-    values: {
-      text: string;
-    };
-    errors: { text?: string[] | undefined };
-  };
+  fields: Fields;
+  errors: Errors;
 };
 
 export async function createTodo(
   prevState: CreateTodoFormState,
-  formData?: FormData,
-): Promise<{
-  message: string;
-  fields: {
-    values: {
-      text: string;
-    };
-    errors: { text?: string[] | undefined };
-  };
-}> {
-  const values = Object.fromEntries(formData ?? [["text", ""]]) as {
-    text: string;
-  };
-  const parse = createTodoSchema.safeParse(values);
-
-  if (!parse.success) {
-    return {
-      message: parse.error.formErrors.fieldErrors.text?.[0] ?? "Invalid fields",
-      fields: {
-        values: {
-          text: values?.text ?? "",
-        },
-        errors: parse.error.formErrors.fieldErrors,
-      },
-    };
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  formValues: CreateTodoFormState["fields"] = { text: "" },
+): Promise<CreateTodoFormState> {
   try {
-    await api.todo.create({ text: parse.data.text });
+    await api.todo.create(formValues);
     revalidatePath("");
     return {
       message: "Creation success",
       fields: {
-        values: {
-          text: "",
-        },
-        errors: {},
+        text: "",
       },
+      errors: {},
     };
-  } catch {
-    return {
-      message: "An error occurred. Please try again.",
-      fields: {
-        values: parse.data,
+  } catch (error) {
+    if (error instanceof TRPCError) {
+      const response = {
+        message: error.code,
+        fields: formValues,
         errors: {},
-      },
+      };
+      if (error.cause instanceof ZodError) {
+        return {
+          ...response,
+          errors: error.cause.formErrors.fieldErrors,
+        };
+      }
+      return response;
+    }
+
+    return {
+      message: "Generic error. Please try again.",
+      fields: formValues,
+      errors: {},
     };
   }
 }

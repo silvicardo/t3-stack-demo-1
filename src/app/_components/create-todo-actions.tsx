@@ -5,8 +5,10 @@ import {
   createTodo,
   type CreateTodoFormState,
 } from "~/app/actions/create-todo";
-import { type FormEvent, useRef, useState } from "react";
 import { createTodoSchema } from "~/app/create-todo-schema";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useLayoutEffect } from "react";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -24,62 +26,54 @@ function SubmitButton() {
   );
 }
 
+type FormValues = CreateTodoFormState["fields"];
+
 export function CreateTodoActions() {
-  const formRef = useRef<HTMLFormElement>(null);
   const [state, dispatch] = useFormState<CreateTodoFormState>(createTodo, {
     message: "",
     fields: {
-      values: {
-        text: "",
-      },
-      errors: {},
+      text: "",
+    },
+    errors: {},
+  });
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isValid, isSubmitted },
+  } = useForm<FormValues>({
+    resolver: zodResolver(createTodoSchema),
+    defaultValues: {
+      text: state.fields.text ?? "",
     },
   });
-  const [clientFormState, setClientFormState] = useState<
-    CreateTodoFormState["fields"]
-  >(state.fields);
 
-  const onClientSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const parse = createTodoSchema.safeParse(clientFormState.values);
-    if (!parse.success) {
-      setClientFormState((prevState) => ({
-        ...prevState,
-        errors: parse.error.formErrors.fieldErrors,
-      }));
-      return;
+  useLayoutEffect(() => {
+    //TODO:: this should be set in useForm error prop
+    if (state.errors.text?.[0]) {
+      setError("text", { type: "custom", message: state.errors.text[0] });
     }
-    formRef.current?.submit();
-  };
+  }, [state.errors.text, setError]);
 
   return (
     <form
-      ref={formRef}
-      action={dispatch}
-      className={`group flex w-full max-w-xl flex-col gap-2 rounded-xl border p-5 shadow-md ${clientFormState.errors.text?.[0] ? "is-invalid" : ""}`}
-      onSubmit={onClientSubmit}
-      noValidate
+      className={`group flex w-full max-w-xl flex-col gap-2 rounded-xl border p-5 shadow-md ${isSubmitted && !isValid ? "is-invalid" : ""}`}
+      onSubmit={handleSubmit(dispatch)}
     >
-      <div className={`form-field`}>
+      <div
+        className={`form-field group ${errors.text?.message ? "has-error" : ""}`}
+      >
         <label htmlFor={"text"}>Text</label>
         <textarea
-          name={"text"}
-          value={clientFormState.values.text}
-          onChange={(e) => {
-            setClientFormState(() => ({
-              errors: {},
-              values: {
-                text: e.target.value,
-              },
-            }));
-          }}
+          {...register("text")}
           placeholder="Write text..."
-          className="w-full rounded-xl border p-2 group-[.is-invalid]:border-red-500"
+          className="w-full rounded-xl border p-2 group-[.has-error]:border-red-500"
         />
         <span
-          className={"hidden text-sm text-red-500 group-[.is-invalid]:block"}
+          className={"hidden text-sm text-red-500 group-[.has-error]:block"}
         >
-          {clientFormState.errors.text?.[0]}
+          {errors.text?.message?.toString()}
         </span>
       </div>
       <SubmitButton />
